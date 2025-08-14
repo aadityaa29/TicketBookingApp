@@ -8,7 +8,8 @@ import {
   Booking, 
   TheaterGroup, 
   BookingRequest, 
-  PaymentRequest 
+  PaymentRequest,
+  RegisterData // Make sure this is imported from your types file
 } from '../types';
 
 const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:5000/api';
@@ -35,13 +36,14 @@ api.interceptors.request.use(
   }
 );
 
-// Response interceptor to handle errors
+// Response interceptor to handle global 401 errors
 api.interceptors.response.use(
   (response) => {
     return response;
   },
   (error) => {
     if (error.response?.status === 401) {
+      // This will trigger the logout function in your AuthContext if the token is invalid
       localStorage.removeItem('token');
       localStorage.removeItem('user');
       window.location.href = '/login';
@@ -50,64 +52,57 @@ api.interceptors.response.use(
   }
 );
 
-// Auth API
-export const authApi = {
-  register: (name: string, email: string, password: string, phone: string) =>
-    api.post<ApiResponse<{ token: string; user: User }>>('/auth/register', {
-      name,
-      email,
-      password,
-      phone,
-    }),
-
-  login: (email: string, password: string) =>
-    api.post<ApiResponse<{ token: string; user: User }>>('/auth/login', {
-      email,
-      password,
-    }),
-
-  getProfile: () =>
-    api.get<ApiResponse<User>>('/auth/me'),
-
-  updateProfile: (data: { name?: string; phone?: string }) =>
-    api.put<ApiResponse<User>>('/auth/updateprofile', data),
-
-  updatePassword: (currentPassword: string, newPassword: string) =>
-    api.put<ApiResponse<{ token: string }>>('/auth/updatepassword', {
-      currentPassword,
-      newPassword,
-    }),
+// Define the shape of the auth response data, which is just a token
+type AuthResponse = {
+  token: string;
 };
 
-// Movies API
+// --- AUTH API ---
+export const authApi = {
+  // ✅ FIX: Changed to accept a single data object to match AuthContext
+  register: (data: RegisterData) =>
+    api.post<ApiResponse<AuthResponse>>('/auth/register', data),
+
+  // ✅ FIX: The backend only returns a token, not the user object
+  login: (email: string, password: string) =>
+    api.post<ApiResponse<AuthResponse>>('/auth/login', { email, password }),
+
+  // ✅ FIX: Corrected the endpoint to match your backend user routes
+  getProfile: () =>
+    api.get<ApiResponse<User>>('/users/profile'),
+};
+
+// --- MOVIES API ---
 export const moviesApi = {
   getMovies: (params?: {
     page?: number;
     limit?: number;
     genre?: string;
-    language?: string;
+    languages?: string; // Note: backend model uses 'languages'
     city?: string;
   }) => {
     const queryParams = new URLSearchParams();
     if (params?.page) queryParams.append('page', params.page.toString());
     if (params?.limit) queryParams.append('limit', params.limit.toString());
     if (params?.genre) queryParams.append('genre', params.genre);
-    if (params?.language) queryParams.append('language', params.language);
+    if (params?.languages) queryParams.append('languages', params.languages);
     
-    return api.get<ApiResponse<Movie[]>>(`/movies?${queryParams.toString()}`);
+    let url = '/movies';
+    if (params?.city) {
+        url = `/movies/city/${params.city}`;
+    }
+    
+    return api.get<ApiResponse<Movie[]>>(`${url}?${queryParams.toString()}`);
   },
 
   getMovie: (id: string) =>
     api.get<ApiResponse<Movie>>(`/movies/${id}`),
 
   searchMovies: (searchTerm: string) =>
-    api.get<ApiResponse<Movie[]>>(`/movies/search/${searchTerm}`),
-
-  getMoviesByCity: (city: string) =>
-    api.get<ApiResponse<Movie[]>>(`/movies/city/${city}`),
+    api.get<ApiResponse<Movie[]>>(`/movies/search?q=${searchTerm}`), // Changed to query param
 };
 
-// Theaters API
+// --- THEATERS API ---
 export const theatersApi = {
   getTheaters: (params?: {
     page?: number;
@@ -124,64 +119,23 @@ export const theatersApi = {
 
   getTheater: (id: string) =>
     api.get<ApiResponse<Theater>>(`/theaters/${id}`),
-
-  getTheatersByCity: (city: string) =>
-    api.get<ApiResponse<Theater[]>>(`/theaters/city/${city}`),
-
-  getTheatersForMovie: (movieId: string, city?: string, date?: string) => {
-    const queryParams = new URLSearchParams();
-    if (city) queryParams.append('city', city);
-    if (date) queryParams.append('date', date);
-    
-    return api.get<ApiResponse<Theater[]>>(`/theaters/movie/${movieId}?${queryParams.toString()}`);
-  },
 };
 
-// Shows API
+// --- SHOWS API ---
 export const showsApi = {
-  getShows: (params?: {
-    movie?: string;
-    theater?: string;
-    city?: string;
-    date?: string;
-    page?: number;
-    limit?: number;
-  }) => {
-    const queryParams = new URLSearchParams();
-    if (params?.movie) queryParams.append('movie', params.movie);
-    if (params?.theater) queryParams.append('theater', params.theater);
-    if (params?.city) queryParams.append('city', params.city);
-    if (params?.date) queryParams.append('date', params.date);
-    if (params?.page) queryParams.append('page', params.page.toString());
-    if (params?.limit) queryParams.append('limit', params.limit.toString());
-    
-    return api.get<ApiResponse<Show[]>>(`/shows?${queryParams.toString()}`);
-  },
-
-  getShow: (id: string) =>
-    api.get<ApiResponse<Show>>(`/shows/${id}`),
-
   getShowsForMovieAndCity: (movieId: string, city: string, date?: string) => {
     const queryParams = new URLSearchParams();
     if (date) queryParams.append('date', date);
     
     return api.get<ApiResponse<TheaterGroup[]>>(`/shows/movie/${movieId}/city/${city}?${queryParams.toString()}`);
   },
+
+  getShow: (id: string) =>
+    api.get<ApiResponse<Show>>(`/shows/${id}`),
 };
 
-// Bookings API
+// --- BOOKINGS API ---
 export const bookingsApi = {
-  getBookings: (params?: { page?: number; limit?: number }) => {
-    const queryParams = new URLSearchParams();
-    if (params?.page) queryParams.append('page', params.page.toString());
-    if (params?.limit) queryParams.append('limit', params.limit.toString());
-    
-    return api.get<ApiResponse<Booking[]>>(`/bookings?${queryParams.toString()}`);
-  },
-
-  getBooking: (id: string) =>
-    api.get<ApiResponse<Booking>>(`/bookings/${id}`),
-
   createBooking: (data: BookingRequest) =>
     api.post<ApiResponse<Booking>>('/bookings', data),
 
@@ -192,13 +146,13 @@ export const bookingsApi = {
     api.put<ApiResponse<{ bookingId: string; refundAmount: number; message: string }>>(`/bookings/${id}/cancel`, {
       reason,
     }),
+  
+  getBooking: (id: string) =>
+    api.get<ApiResponse<Booking>>(`/bookings/${id}`),
 };
 
-// Users API
+// --- USERS API (for authenticated user actions) ---
 export const usersApi = {
-  getProfile: () =>
-    api.get<ApiResponse<User>>('/users/profile'),
-
   updateProfile: (data: { name?: string; phone?: string; avatar?: string }) =>
     api.put<ApiResponse<User>>('/users/profile', data),
 

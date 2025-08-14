@@ -46,10 +46,10 @@ const userSchema = new mongoose.Schema({
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Booking'
     }],
-    createdAt: {
-        type: Date,
-        default: Date.now
-    }
+}, {
+    // ✅ IMPROVEMENT: Use Mongoose's built-in timestamps.
+    // This automatically adds `createdAt` and `updatedAt` fields.
+    timestamps: true
 });
 
 // Hash password before saving
@@ -65,6 +65,14 @@ userSchema.pre('save', async function(next) {
     } catch (error) {
         next(error);
     }
+});
+
+// ✅ CRITICAL FIX: Add cascading delete for bookings.
+// This ensures that when a user is deleted, all their bookings are also deleted.
+userSchema.pre('deleteOne', { document: true, query: false }, async function(next) {
+    console.log(`Bookings being removed for user ${this._id}`);
+    await this.model('Booking').deleteMany({ user: this._id });
+    next();
 });
 
 // Compare password method

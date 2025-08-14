@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
-import { FaSearch, FaUser, FaMapMarkerAlt } from 'react-icons/fa';
+import { MdSearch, MdLocationOn, MdPerson } from 'react-icons/md';
 import { useAuth } from '../context/AuthContext';
 import { colors, Container, Button, Flex } from '../styles/GlobalStyles';
 
@@ -25,7 +25,7 @@ const Logo = styled(Link)`
   font-weight: bold;
   color: ${colors.primary};
   text-decoration: none;
-  
+
   &:hover {
     color: ${colors.primaryDark};
   }
@@ -157,7 +157,7 @@ const Header: React.FC = () => {
   const navigate = useNavigate();
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedCity, setSelectedCity] = useState('Mumbai');
+  const [selectedCity] = useState('Mumbai'); // removed unused setter
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -178,7 +178,7 @@ const Header: React.FC = () => {
         <Logo to="/">BookMyShow</Logo>
 
         <SearchContainer>
-          <FaSearch color={colors.gray[500]} />
+          {/* <MdSearch color={colors.gray[500]} size={20} /> */}
           <form onSubmit={handleSearch} style={{ width: '100%' }}>
             <SearchInput
               type="text"
@@ -191,14 +191,14 @@ const Header: React.FC = () => {
 
         <Flex align="center" gap="16px">
           <LocationSelector>
-            <FaMapMarkerAlt color={colors.primary} size={14} />
+            {/* <MdLocationOn color={colors.primary} size={14} /> */}
             <span>{selectedCity}</span>
           </LocationSelector>
 
           {isAuthenticated ? (
             <UserMenu>
               <UserButton onClick={() => setShowUserMenu(!showUserMenu)}>
-                <FaUser />
+                {/* <MdPerson size={20} /> */}
                 <span>Hi, {user?.name.split(' ')[0]}</span>
               </UserButton>
               <DropdownMenu show={showUserMenu}>

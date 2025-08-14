@@ -21,7 +21,8 @@ const movieSchema = new mongoose.Schema({
             'Crime', 'Documentary', 'Family', 'Mystery', 'War'
         ]
     }],
-    language: [{
+    // ✅ RENAMED to avoid conflict with MongoDB's reserved 'language' field
+    languages: [{
         type: String,
         required: true,
         enum: [
@@ -56,15 +57,18 @@ const movieSchema = new mongoose.Schema({
     }],
     poster: {
         type: String,
-        required: [true, 'Movie poster is required']
+        required: [true, 'Movie poster is required'],
+        match: [/^https?:\/\/.+/, 'Poster must be a valid URL']
     },
     banner: {
         type: String,
-        default: ''
+        default: '',
+        match: [/^$|^https?:\/\/.+/, 'Banner must be a valid URL']
     },
     trailer: {
         type: String,
-        default: ''
+        default: '',
+        match: [/^$|^https?:\/\/.+/, 'Trailer must be a valid URL']
     },
     rating: {
         type: String,
@@ -101,30 +105,36 @@ const movieSchema = new mongoose.Schema({
         type: String,
         trim: true
     }],
-    createdAt: {
-        type: Date,
-        default: Date.now
-    },
-    updatedAt: {
-        type: Date,
-        default: Date.now
-    }
+}, {
+    // ✅ ADDED for cleaner timestamps and to include virtuals in output
+    timestamps: true,
+    toJSON: { virtuals: true },
+    toObject: { virtuals: true }
 });
 
-// Update the updatedAt field before saving
-movieSchema.pre('save', function(next) {
-    this.updatedAt = Date.now();
-    next();
+// ✅ ADDED a virtual property for a user-friendly duration format
+movieSchema.virtual('durationInHours').get(function() {
+    if (!this.duration) return '';
+    const hours = Math.floor(this.duration / 60);
+    const minutes = this.duration % 60;
+    return `${hours}h ${minutes}m`;
 });
 
-// Index for text search
+// ✅ IMPROVED Text index for full-text search optimization
 movieSchema.index({
     title: 'text',
     description: 'text',
     genre: 'text',
-    language: 'text',
+    languages: 'text', // Now safe to include
     director: 'text',
     'cast.name': 'text'
 });
+
+// ✅ ADDED indexes for faster filtering and sorting
+movieSchema.index({ releaseDate: -1 }); // For sorting by newest movies
+movieSchema.index({ genre: 1 });        // For filtering by genre
+movieSchema.index({ isActive: 1 });      // For finding currently active movies
+
+// 🗑️ REMOVED manual updatedAt middleware, as `timestamps: true` handles it.
 
 module.exports = mongoose.model('Movie', movieSchema);

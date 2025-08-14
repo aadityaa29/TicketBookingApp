@@ -20,7 +20,7 @@ const LoginContainer = styled.div`
   align-items: center;
   justify-content: center;
   padding: 40px 0;
-  background: ${colors.gray[50]};
+  background: ${colors.gray[100]};
 `;
 
 const LoginCard = styled(Card)`
@@ -63,13 +63,20 @@ const Login: React.FC = () => {
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isLoading, setIsLoading] = useState(false);
+  // ✅ 1. Add state for server-side errors
+  const [serverError, setServerError] = useState('');
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
-    // Clear error when user starts typing
+
+    // Clear validation error when user starts typing
     if (errors[name]) {
       setErrors(prev => ({ ...prev, [name]: '' }));
+    }
+    // ✅ 2. Clear server error on new input
+    if (serverError) {
+      setServerError('');
     }
   };
 
@@ -98,11 +105,17 @@ const Login: React.FC = () => {
     if (!validateForm()) return;
 
     setIsLoading(true);
+    setServerError(''); // Clear previous server errors before a new attempt
+
     try {
       await login(formData.email, formData.password);
       navigate('/');
-    } catch (error) {
+    } catch (error: any) {
       console.error('Login failed:', error);
+      // ✅ 3. Capture and display the server error message
+      // This attempts to get a clean error message from an Axios error response
+      const message = error.response?.data?.message || 'Login failed. Please try again.';
+      setServerError(message);
     } finally {
       setIsLoading(false);
     }
@@ -141,6 +154,9 @@ const Login: React.FC = () => {
               />
               {errors.password && <ErrorText>{errors.password}</ErrorText>}
             </InputGroup>
+
+            {/* ✅ 4. Render the server error message above the button */}
+            {serverError && <ErrorText>{serverError}</ErrorText>}
 
             <Button
               type="submit"

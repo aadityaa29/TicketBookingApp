@@ -12,10 +12,7 @@ dotenv.config();
 
 const connectDB = async () => {
   try {
-    await mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/ticketbooking', {
-      useNewUrlParser: true,
-      useUnifiedTopology: true,
-    });
+    await mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/ticketbooking');
     console.log('MongoDB connected');
   } catch (error) {
     console.error('Database connection error:', error);
@@ -28,7 +25,7 @@ const sampleMovies = [
     title: "Avatar: The Way of Water",
     description: "Set more than a decade after the events of the first film, Avatar: The Way of Water begins to tell the story of the Sully family, the trouble that follows them, and the lengths they go to keep each other safe.",
     genre: ["Action", "Adventure", "Sci-Fi"],
-    language: ["English", "Hindi"],
+    languages: ["English", "Hindi"], 
     duration: 192,
     releaseDate: new Date("2022-12-16"),
     director: "James Cameron",
@@ -48,7 +45,7 @@ const sampleMovies = [
     title: "Black Panther: Wakanda Forever",
     description: "Queen Ramonda, Shuri, M'Baku, Okoye and the Dora Milaje fight to protect their nation from intervening world powers in the wake of King T'Challa's death.",
     genre: ["Action", "Adventure", "Drama"],
-    language: ["English", "Hindi"],
+    languages: ["English", "Hindi"], // FIXED
     duration: 161,
     releaseDate: new Date("2022-11-11"),
     director: "Ryan Coogler",
@@ -67,7 +64,7 @@ const sampleMovies = [
     title: "Top Gun: Maverick",
     description: "After thirty years, Maverick is still pushing the envelope as a top naval aviator, but must confront ghosts of his past when he leads TOP GUN's elite graduates on a mission that demands the ultimate sacrifice from those chosen to fly it.",
     genre: ["Action", "Drama"],
-    language: ["English", "Hindi"],
+    languages: ["English", "Hindi"], // FIXED
     duration: 130,
     releaseDate: new Date("2022-05-27"),
     director: "Joseph Kosinski",
@@ -214,14 +211,13 @@ const seedData = async () => {
     console.log('Existing data cleared');
 
     // Create admin user
-    const hashedPassword = await bcrypt.hash('admin123', 10);
-    const adminUser = await User.create({
-      name: 'Admin User',
-      email: 'admin@bookmyshow.com',
-      password: hashedPassword,
-      phone: '9999999999',
-      role: 'admin'
-    });
+    await User.create({
+    name: 'Admin User',
+    email: 'admin@bookmyshow.com',
+    password: 'admin123', // Pass the plain-text password
+    phone: '9999999999',
+    role: 'admin'
+});
 
     console.log('Admin user created');
 
@@ -245,21 +241,15 @@ const seedData = async () => {
         for (const theater of theaters) {
           for (const screen of theater.screens) {
             for (const time of showTimes) {
-              // Create seats array
               const seats = [];
               const rows = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P'];
               
               for (let rowIndex = 0; rowIndex < screen.seatLayout.rows; rowIndex++) {
                 const rowLetter = rows[rowIndex];
                 for (let seatNum = 1; seatNum <= screen.seatLayout.seatsPerRow; seatNum++) {
-                  // Determine seat type based on screen configuration
                   let seatType = 'Regular';
-                  const seatTypeConfig = screen.seatTypes.find(st => 
-                    st.rows.includes(rowLetter)
-                  );
-                  if (seatTypeConfig) {
-                    seatType = seatTypeConfig.type;
-                  }
+                  const seatTypeConfig = screen.seatTypes.find(st => st.rows.includes(rowLetter));
+                  if (seatTypeConfig) seatType = seatTypeConfig.type;
 
                   seats.push({
                     seatNumber: `${rowLetter}${seatNum}`,
@@ -271,7 +261,6 @@ const seedData = async () => {
                 }
               }
 
-              // Set booking end time (30 minutes before show)
               const showDateTime = new Date(`${showDate.toISOString().split('T')[0]}T${time}`);
               const bookingEndTime = new Date(showDateTime.getTime() - 30 * 60000);
 
@@ -284,7 +273,7 @@ const seedData = async () => {
                 },
                 date: showDate,
                 time,
-                language: movie.language[0],
+                language: movie.languages[0], // FIXED
                 format: screen.facilities.includes('3D') ? '3D' : '2D',
                 pricing: screen.seatTypes.map(st => ({
                   seatType: st.type,

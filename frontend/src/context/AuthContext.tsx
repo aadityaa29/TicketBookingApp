@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { AuthContextType, User } from '../types';
+import { AuthContextType, User, RegisterData } from '../types';
 import { authApi } from '../services/api';
 import { toast } from 'react-toastify';
 
@@ -24,29 +24,26 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const isAuthenticated = !!token && !!user;
 
-  useEffect(() => {
-    // Check if user is logged in on app start
-    const savedToken = localStorage.getItem('token');
-    const savedUser = localStorage.getItem('user');
+  const fetchProfile = async () => {
+    try {
+      const response = await authApi.getProfile();
+      if (response.data.success && response.data.data) {
+        const userData = response.data.data;
+        setUser(userData);
+        localStorage.setItem('user', JSON.stringify(userData));
+        return userData;
+      }
+    } catch (error) {
+      logout();
+    }
+    return null;
+  };
 
-    if (savedToken && savedUser) {
+  useEffect(() => {
+    const savedToken = localStorage.getItem('token');
+    if (savedToken) {
       setToken(savedToken);
-      setUser(JSON.parse(savedUser));
-      
-      // Verify token is still valid
-      authApi.getProfile()
-        .then(response => {
-          if (response.data.success && response.data.data) {
-            setUser(response.data.data);
-          }
-        })
-        .catch(() => {
-          // Token is invalid, clear everything
-          logout();
-        })
-        .finally(() => {
-          setLoading(false);
-        });
+      fetchProfile().finally(() => setLoading(false));
     } else {
       setLoading(false);
     }
@@ -56,14 +53,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     try {
       const response = await authApi.login(email, password);
       
-      if (response.data.success && response.data.data) {
-        const { token: newToken, user: userData } = response.data.data;
-        
+      // ✅ FIX: The token is inside the 'data' property of the response
+      if (response.data.success && response.data.data?.token) {
+        const newToken = response.data.data.token;
         setToken(newToken);
-        setUser(userData);
-        
         localStorage.setItem('token', newToken);
-        localStorage.setItem('user', JSON.stringify(userData));
+        
+        await fetchProfile();
         
         toast.success('Login successful!');
       } else {
@@ -72,23 +68,22 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     } catch (error: any) {
       const message = error.response?.data?.message || error.message || 'Login failed';
       toast.error(message);
-      throw new Error(message);
+      throw error;
     }
   };
 
-  const register = async (name: string, email: string, password: string, phone: string) => {
+  const register = async (registerData: RegisterData) => {
     try {
-      const response = await authApi.register(name, email, password, phone);
+      const response = await authApi.register(registerData);
       
-      if (response.data.success && response.data.data) {
-        const { token: newToken, user: userData } = response.data.data;
-        
+      // ✅ FIX: The token is inside the 'data' property of the response
+      if (response.data.success && response.data.data?.token) {
+        const newToken = response.data.data.token;
         setToken(newToken);
-        setUser(userData);
-        
         localStorage.setItem('token', newToken);
-        localStorage.setItem('user', JSON.stringify(userData));
-        
+
+        await fetchProfile();
+
         toast.success('Registration successful!');
       } else {
         throw new Error(response.data.message || 'Registration failed');
@@ -96,7 +91,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     } catch (error: any) {
       const message = error.response?.data?.message || error.message || 'Registration failed';
       toast.error(message);
-      throw new Error(message);
+      throw error;
     }
   };
 
@@ -105,7 +100,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     setToken(null);
     localStorage.removeItem('token');
     localStorage.removeItem('user');
-    toast.success('Logged out successfully');
+    toast.info('You have been logged out.');
   };
 
   const value: AuthContextType = {

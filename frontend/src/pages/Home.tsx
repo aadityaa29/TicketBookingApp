@@ -167,7 +167,8 @@ const Home: React.FC = () => {
                       ))}
                     </div>
                     <Text size="sm" color={colors.gray[600]}>
-                      {movie.language.join(', ')} • {movie.duration} mins
+                      {/* ✅ FIX: Changed movie.language to movie.languages */}
+                      {movie.languages.join(', ')} • {movie.duration} mins
                     </Text>
                     <MovieDetails>
                       <Rating>★ {movie.imdbRating}/10</Rating>

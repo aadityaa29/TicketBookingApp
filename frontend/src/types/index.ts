@@ -1,5 +1,13 @@
+// This defines the data structure for the registration form
+export interface RegisterData {
+  name: string;
+  email: string;
+  phone: string;
+  password: string;
+}
+
 export interface User {
-  id: string;
+  _id: string; // ✅ FIX: Changed from 'id' to '_id' to match MongoDB
   name: string;
   email: string;
   phone: string;
@@ -14,7 +22,7 @@ export interface Movie {
   title: string;
   description: string;
   genre: string[];
-  language: string[];
+  languages: string[];
   duration: number;
   releaseDate: string;
   director: string;
@@ -90,7 +98,7 @@ export interface Show {
   };
   date: string;
   time: string;
-  language: string;
+  showLanguage: string; // ✅ FIX: Changed from 'languages' to match your Show model
   format: '2D' | '3D' | 'IMAX' | '4DX';
   pricing: {
     seatType: 'Regular' | 'Premium' | 'Recliner' | 'VIP';
@@ -165,7 +173,8 @@ export interface AuthContextType {
   token: string | null;
   isAuthenticated: boolean;
   login: (email: string, password: string) => Promise<void>;
-  register: (name: string, email: string, password: string, phone: string) => Promise<void>;
+  // ✅ FIX: Changed register to accept a single object to match the AuthContext implementation.
+  register: (registerData: RegisterData) => Promise<void>;
   logout: () => void;
   loading: boolean;
 }
@@ -187,7 +196,7 @@ export interface TheaterGroup {
     _id: string;
     date: string;
     time: string;
-    language: string;
+    languages: string;
     format: string;
     screen: {
       screenId: string;
