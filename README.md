@@ -45,8 +45,8 @@ Before running this application, make sure you have the following installed:
 
 ### 1. Clone the repository
 ```bash
-git clone <your-repo-url>
-cd ticket-booking-app
+git clone https://github.com/aadityaa29/TicketBookingApp.git
+cd TicketBookingApp
 ```
 
 ### 2. Backend Setup
@@ -155,7 +155,7 @@ The frontend will run on `http://localhost:3000`
 ## Project Structure
 
 ```
-ticket-booking-app/
+TicketBookingApp/
 ├── backend/
 │   ├── config/
 │   ├── controllers/
